@@ -76,6 +76,10 @@ func (r *Response) fixCharset(detectCharset bool, defaultEncoding string) error 
 	}
 	contentType := strings.ToLower(r.Headers.Get("Content-Type"))
 
+	if !strings.HasPrefix(contentType, "text/") {
+		return fmt.Errorf("Invalid content-type: %q %q", r.Request.URL, contentType)
+	}
+
 	if strings.Contains(contentType, "image/") ||
 		strings.Contains(contentType, "video/") ||
 		strings.Contains(contentType, "audio/") ||

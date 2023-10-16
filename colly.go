@@ -774,7 +774,9 @@ func (c *Collector) requestCheck(parsedURL *url.URL, method string, getBody func
 		if visited {
 			return &AlreadyVisitedError{parsedURL}
 		}
-		return c.store.Visited(uHash)
+		if method != "HEAD" {
+			return c.store.Visited(uHash)
+		}
 	}
 	return nil
 }
@@ -1357,9 +1359,11 @@ func (c *Collector) checkRedirectFunc() func(req *http.Request, via []*http.Requ
 			if visited {
 				return &AlreadyVisitedError{req.URL}
 			}
-			err = c.store.Visited(uHash)
-			if err != nil {
-				return err
+			if req.Method != "HEAD" {
+				err = c.store.Visited(uHash)
+				if err != nil {
+					return err
+				}
 			}
 		}
 
