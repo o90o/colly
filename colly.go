@@ -40,10 +40,10 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/antchfx/htmlquery"
 	"github.com/antchfx/xmlquery"
-	"github.com/gocolly/colly/v2/debug"
-	"github.com/gocolly/colly/v2/storage"
 	"github.com/kennygrant/sanitize"
 	whatwgUrl "github.com/nlnwa/whatwg-url/url"
+	"github.com/o90o/colly/debug"
+	"github.com/o90o/colly/storage"
 	"github.com/temoto/robotstxt"
 	"google.golang.org/appengine/urlfetch"
 )
