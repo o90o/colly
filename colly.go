@@ -519,14 +519,14 @@ func (c *Collector) Visit(URL string) error {
 }
 
 // HasVisited checks if the provided URL has been visited
-func (c *Collector) HasVisited(URL string) (bool, error) {
-	return c.checkHasVisited(URL, nil)
+func (c *Collector) HasVisited(URL string, method string) (bool, error) {
+	return c.checkHasVisited(URL, method, nil)
 }
 
 // HasPosted checks if the provided URL and requestData has been visited
 // This method is useful more likely to prevent re-visit same URL and POST body
 func (c *Collector) HasPosted(URL string, requestData map[string]string) (bool, error) {
-	return c.checkHasVisited(URL, requestData)
+	return c.checkHasVisited(URL, "POST", requestData)
 }
 
 // Head starts a collector job by creating a HEAD request.
@@ -753,10 +753,6 @@ func (c *Collector) requestCheck(parsedURL *url.URL, method string, getBody func
 		// TODO weird behaviour, it allows CheckHead to work correctly,
 		// but it should probably better be solved with
 		// "check-but-not-save" flag or something
-		if method != "GET" && getBody == nil {
-			return nil
-		}
-
 		var body io.ReadCloser
 		if getBody != nil {
 			var err error
@@ -766,7 +762,7 @@ func (c *Collector) requestCheck(parsedURL *url.URL, method string, getBody func
 			}
 			defer body.Close()
 		}
-		uHash := requestHash(u, body)
+		uHash := requestHash(u, method, body)
 		visited, err := c.store.IsVisited(uHash)
 		if err != nil {
 			return err
@@ -774,9 +770,7 @@ func (c *Collector) requestCheck(parsedURL *url.URL, method string, getBody func
 		if visited {
 			return &AlreadyVisitedError{parsedURL}
 		}
-		if method != "HEAD" {
-			return c.store.Visited(uHash)
-		}
+		return c.store.Visited(uHash)
 	}
 	return nil
 }
@@ -1351,7 +1345,7 @@ func (c *Collector) checkRedirectFunc() func(req *http.Request, via []*http.Requ
 				}
 				defer body.Close()
 			}
-			uHash := requestHash(req.URL.String(), body)
+			uHash := requestHash(req.URL.String(), req.Method, body)
 			visited, err := c.store.IsVisited(uHash)
 			if err != nil {
 				return err
@@ -1359,11 +1353,9 @@ func (c *Collector) checkRedirectFunc() func(req *http.Request, via []*http.Requ
 			if visited {
 				return &AlreadyVisitedError{req.URL}
 			}
-			if req.Method != "HEAD" {
-				err = c.store.Visited(uHash)
-				if err != nil {
-					return err
-				}
+			err = c.store.Visited(uHash)
+			if err != nil {
+				return err
 			}
 		}
 
@@ -1401,8 +1393,8 @@ func (c *Collector) parseSettingsFromEnv() {
 	}
 }
 
-func (c *Collector) checkHasVisited(URL string, requestData map[string]string) (bool, error) {
-	hash := requestHash(URL, createFormReader(requestData))
+func (c *Collector) checkHasVisited(URL string, method string, requestData map[string]string) (bool, error) {
+	hash := requestHash(URL, method, createFormReader(requestData))
 	return c.store.IsVisited(hash)
 }
 
@@ -1523,11 +1515,12 @@ func normalizeURL(u string) string {
 	return parsed.String()
 }
 
-func requestHash(url string, body io.Reader) uint64 {
+func requestHash(url string, method string, body io.Reader) uint64 {
 	h := fnv.New64a()
 	// reparse the url to fix ambiguities such as
 	// "http://example.com" vs "http://example.com/"
 	io.WriteString(h, normalizeURL(url))
+	io.WriteString(h, method)
 	if body != nil {
 		io.Copy(h, body)
 	}

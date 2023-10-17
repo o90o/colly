@@ -121,7 +121,7 @@ func (r *Request) Visit(URL string) error {
 
 // HasVisited checks if the provided URL has been visited
 func (r *Request) HasVisited(URL string) (bool, error) {
-	return r.collector.HasVisited(URL)
+	return r.collector.HasVisited(URL, r.Method)
 }
 
 // Post continues a collector job by creating a POST request and preserves the Context
